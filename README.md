@@ -57,3 +57,10 @@ N-граммы + кэш. Вероятности предложения того 
 - 2020 [Suggesting Natural Method Names to Check Name Consistencies](https://sonvnguyen.github.io/publications/icse20-final.pdf)
 
 [Сайт с обзором статьи](https://sonvnguyen.github.io/mnire/)
+
+Имя методу предсказывается как обобщение 3х видов контекста, в которых он находится:
+1) имплементация метода(как он реализован)
+2) интерфейс(вход/выход, типы аргументов и т.д)
+3) окружающий контекст(класс окружения)
+
+Для обобщения(*summary*) контекста используется модель *Encoder-Decoder* с *attention*.
