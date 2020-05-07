@@ -31,6 +31,7 @@ public class Main {
         // Learn identifiers from train and feed them to the model
         Identifiers identifiers = new Identifiers(lexerRunner, vocabulary);
         identifiers.learn(train);
+        identifiers.setClosed(true);
         Model model = new IdModel(identifiers, 6, new GigaCounter());
 
         ModelRunner modelRunner = new ModelRunner(model, lexerRunner, vocabulary); // Use above lexer and vocabulary
@@ -44,6 +45,7 @@ public class Main {
         List<Double> fileMRRs = modelRunner.predictFile(test).stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
+
         System.out.printf("MRR on identifiers: %.4f", IntStream.range(0, fileMRRs.size())
                 .filter(ind -> identifiers.getIndices().contains(fileIndices.get(ind)))
                 .mapToDouble(fileMRRs::get)

@@ -23,6 +23,12 @@ public class Identifiers {
     private LexerRunner lexerRunner;
     private Vocabulary vocabulary;
 
+    private boolean closed = false;
+
+    public void setClosed(boolean closed) {
+        this.closed = closed;
+    }
+
     public LexerRunner getLexerRunner() {
         return lexerRunner;
     }
@@ -36,34 +42,14 @@ public class Identifiers {
         this.vocabulary = voc;
     }
 
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            System.err.println("Please provide a test file/directory for this example");
-            return;
-        }
-        File file = new File(args[0]);
-
-        Lexer lexer = new JavaLexer();
-        LexerRunner lexerRunner = new LexerRunner(lexer, false);
-
-        lexerRunner.setSentenceMarkers(true);
-        lexerRunner.setExtension("java");
-
-        Vocabulary vocabulary = new Vocabulary();
-
-        Identifiers identifiers = new Identifiers(lexerRunner, vocabulary);
-        identifiers.learn(file);
-        System.out.println(identifiers.getTokens());
-    }
-
     public void learnFileIdentifiers(File file) {
+        if (closed) return;
         CompilationUnit cu = null;
         try {
             cu = StaticJavaParser.parse(file);
         } catch (FileNotFoundException e) {
             System.out.println("File not found: " + file);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.out.println("File with errors: " + file);
             return;
         }
@@ -74,11 +60,12 @@ public class Identifiers {
     }
 
     public void learn(File file) {
+        if (closed) return;
         try {
             if (file.isFile() && lexerRunner.willLexFile(file)) {
                 learnFileIdentifiers(file);
             }
-            if (file.isDirectory()){
+            if (file.isDirectory()) {
                 Files.walk(file.toPath())
                         .map(Path::toFile)
                         .filter(File::isFile)
@@ -96,6 +83,14 @@ public class Identifiers {
 
     public HashSet<Integer> getIndices() {
         return indices;
+    }
+
+    public boolean contains(String token) {
+        return this.getTokens().contains(token);
+    }
+
+    public boolean contains(Integer token) {
+        return this.getIndices().contains(token);
     }
 
     private static class IdentifierNameCollector extends VoidVisitorAdapter<HashSet<String>> {
@@ -117,5 +112,25 @@ public class Identifiers {
             super.visit(name, set);
             name.getVariables().forEach(n -> set.add(n.getNameAsString()));
         }
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("Please provide a test file/directory for this example");
+            return;
+        }
+        File file = new File(args[0]);
+
+        Lexer lexer = new JavaLexer();
+        LexerRunner lexerRunner = new LexerRunner(lexer, false);
+
+        lexerRunner.setSentenceMarkers(true);
+        lexerRunner.setExtension("java");
+
+        Vocabulary vocabulary = new Vocabulary();
+
+        Identifiers identifiers = new Identifiers(lexerRunner, vocabulary);
+        identifiers.learn(file);
+        System.out.println(identifiers.getTokens());
     }
 }

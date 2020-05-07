@@ -3,6 +3,7 @@ import slp.core.modeling.ngram.JMModel;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +13,10 @@ import java.util.stream.IntStream;
 
 public class IdModel extends JMModel {
     private Identifiers identifiers;
+
+    public void setClosed(boolean closed) {
+        identifiers.setClosed(closed);
+    }
 
     public IdModel(Identifiers identifiers) {
         super();
@@ -35,7 +40,7 @@ public class IdModel extends JMModel {
     @Override
     public List<Map<Integer, Pair<Double, Double>>> predict(List<Integer> input) {
         return IntStream.range(0, input.size())
-                .mapToObj(i -> identifiers.getIndices().contains(input.get(i)) ? predictToken(input, i) :
+                .mapToObj(i -> identifiers.contains(input.get(i)) ? predictToken(input, i) :
                         new HashMap<Integer, Pair<Double, Double>>())
                 .collect(Collectors.toList());
     }
@@ -43,9 +48,13 @@ public class IdModel extends JMModel {
     @Override
     public List<Pair<Double, Double>> model(List<Integer> input) {
         return IntStream.range(0, input.size())
-                .mapToObj(i -> identifiers.getIndices().contains(input.get(i)) ? modelToken(input, i) :
+                .mapToObj(i -> identifiers.contains(input.get(i)) ? modelToken(input, i) :
                         new Pair<Double, Double>(null, null))
                 .collect(Collectors.toList());
+    }
+
+    public void learnIdentifiers(File file){
+        this.identifiers.learn(file);
     }
 
     @Override
@@ -55,7 +64,7 @@ public class IdModel extends JMModel {
 
     @Override
     public void learnToken(List<Integer> input, int index) {
-        if (identifiers.getIndices().contains(input.get(index))) {
+        if (identifiers.contains(input.get(index))) {
             List<Integer> sequence = NGramSequencer.sequenceAt(input, index, this.order);
             for (int i = 0; i < sequence.size(); i++) {
                 this.counter.count(sequence.subList(i, sequence.size()));
@@ -70,7 +79,7 @@ public class IdModel extends JMModel {
 
     @Override
     public void forgetToken(List<Integer> input, int index) {
-        if (identifiers.getIndices().contains(input.get(index))) {
+        if (identifiers.contains(input.get(index))) {
             List<Integer> sequence = NGramSequencer.sequenceAt(input, index, this.order);
             for (int i = 0; i < sequence.size(); i++) {
                 this.counter.unCount(sequence.subList(i, sequence.size()));
@@ -82,7 +91,7 @@ public class IdModel extends JMModel {
         List<List<Integer>> result = new ArrayList<List<Integer>>();
         for (int start = 0; start < tokens.size(); start++) {
             int end = Math.min(tokens.size(), start + maxOrder);
-            if (identifiers.getIndices().contains(tokens.get(end - 1))) {
+            if (identifiers.contains(tokens.get(end - 1))) {
                 result.add(tokens.subList(start, end));
             }
         }
@@ -94,7 +103,7 @@ public class IdModel extends JMModel {
         int rightBound = 0;
         for (int start = 0; start < tokens.size(); start++) {
             int end = Math.min(tokens.size(), start + maxOrder);
-            if (identifiers.getIndices().contains(tokens.get(end - 1))) {
+            if (identifiers.contains(tokens.get(end - 1))) {
                 rightBound = end + maxOrder - 1;
                 result.add(tokens.subList(start, end));
             } else if (end < rightBound) {
