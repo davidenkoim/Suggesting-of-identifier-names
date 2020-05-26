@@ -1,9 +1,14 @@
 # Files' statistics
 
-File name                               |N identifiers|Accuracy 1|  MRR  |
-----------------------------------------|-------------|----------|-------|
-AntTypeDefinition.java                  |211          |0.2844    |0.3535 |
-ArgumentProcessorRegistry.java          |87           |0.4713    |0.4990 |
-BaseIfAttribute.java                    |33           |0.3636    |0.4295 |
-DefaultLogger.java                      |199          |0.4070    |0.4607 |
-DemuxOutputStream.java                  |138          |0.3406    |0.3775 |
+File name                                    |N identifiers|Accuracy  |  MRR  |
+---------------------------------------------|-------------|----------|-------|
+PropertyFileTest.java                        |19           |0.4211    |0.5707 |
+JDBCTask.java                                |29           |0.5517    |0.6015 |
+MailMessageTest.java                         |58           |0.8276    |0.8506 |
+ZipEncodingTest.java                         |10           |0.2000    |0.3394 |
+CVSPass.java                                 |12           |0.3333    |0.4861 |
+JUnitLauncherTask.java                       |61           |0.4754    |0.5390 |
+ModifiedSelector.java                        |77           |0.3377    |0.4111 |
+MockBuildListener.java                       |12           |0.7500    |0.7619 |
+XmlProperty.java                             |69           |0.4058    |0.5307 |
+XSLTProcess.java                             |122          |0.4426    |0.5338 |

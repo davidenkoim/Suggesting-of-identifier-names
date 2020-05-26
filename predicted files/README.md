@@ -1,3 +1,9 @@
+# Types of raining:
+
+* `selfTestingIdentifier`: train on the whole project, forget usages of identifier which we are currently predicting.
+* `selfTesting`: train on the whole project, forget identifiers' usages of the file, then predict them.
+* `selfTraining`: learn a file, predict the file(as in `selfTestingIdentifier`), forget the file, and so on...
+
 # Structure
 
 In the begining of all files you can see some statistics about it:
