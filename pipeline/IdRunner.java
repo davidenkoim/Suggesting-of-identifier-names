@@ -38,12 +38,30 @@ public class IdRunner {
 
     private boolean selfTestingIdentifier = false;
 
-    public void setSelfTesting(boolean selfTesting) {
-        this.selfTesting = selfTesting;
+    private boolean selfTraining = false;
+
+    public void selfTraining() {
+        this.selfTraining = true;
+        this.selfTesting = false;
+        this.selfTestingIdentifier = true;
     }
 
-    public void setSelfTestingIdentifier(boolean selfTestingIdentifier) {
-        this.selfTestingIdentifier = selfTestingIdentifier;
+    public void selfTesting() {
+        this.selfTraining = false;
+        this.selfTesting = true;
+        this.selfTestingIdentifier = false;
+    }
+
+    public void selfTestingIdentifier() {
+        this.selfTraining = false;
+        this.selfTesting = false;
+        this.selfTestingIdentifier = true;
+    }
+
+    public void eval() {
+        this.selfTraining = false;
+        this.selfTesting = false;
+        this.selfTestingIdentifier = false;
     }
 
     public IdRunner(Model model, IdLexerRunner lexer, Vocabulary vocabulary) {
@@ -94,6 +112,7 @@ public class IdRunner {
     }
 
     public void learnFile(File f) {
+        this.learnStats = new long[]{0, 0};
         if (!this.idLexerRunner.willLexFile(f))
             return;
         this.model.notify(f);
@@ -110,7 +129,7 @@ public class IdRunner {
         });
     }
 
-    public void learnIdentifier(Identifier id){
+    public void learnIdentifier(Identifier id) {
         this.identifiers.add(vocabulary.toIndex(id.getName()));
         id.usages.forEach(usage -> {
             this.model.learnToken(this.vocabulary.toIndices(usage), usage.size() - 1);
@@ -154,32 +173,35 @@ public class IdRunner {
                 .forEach(usage -> this.model.forgetToken(usage, usage.size() - 1));
     }
 
-    private final int PREDICT_PRINT_INTERVAL = 10000;
+    private final int PREDICT_PRINT_INTERVAL = 1000;
 
     private long[] modelStats = new long[2];
 
     private double mrr = 0.0;
 
-    public List<Pair<File, List<Prediction>>> predict(File file) {
+    public HashMap<File, List<Prediction>> predict(File file) {
         this.modelStats = new long[]{0, -System.currentTimeMillis()};
-        return this.idLexerRunner.lexDirectory(file).map(p -> {
+        HashMap<File, List<Prediction>> result = new HashMap<>();
+        this.idLexerRunner.lexDirectory(file).forEach(p -> {
             this.model.notify(p.left);
-            if (selfTesting)
-                this.forgetFile(p.left);
-            Pair<File, List<Prediction>> res = Pair.of(p.left, this.predictIdentifiers(p.right));
-            if (selfTesting)
-                this.learnFile(p.left);
-            return res;
-        }).collect(Collectors.toList());
+            if (this.selfTraining) this.learnIdentifiers(p.right);
+            if (this.selfTesting) this.forgetIdentifiers(p.right);
+            result.put(p.left, this.predictIdentifiers(p.right));
+            if (this.selfTesting) this.learnIdentifiers(p.right);
+            if (this.selfTraining) this.forgetIdentifiers(p.right);
+        });
+        return result;
     }
 
     public List<Prediction> predictFile(File f) {
         if (!this.idLexerRunner.willLexFile(f))
             return null;
         this.model.notify(f);
+        if (this.selfTraining) this.learnFile(f);
         if (this.selfTesting) this.forgetFile(f);
         List<Prediction> res = predictIdentifiers(this.idLexerRunner.lexFile(f));
         if (this.selfTesting) this.learnFile(f);
+        if (this.selfTraining) this.forgetFile(f);
         return res;
     }
 
@@ -192,13 +214,14 @@ public class IdRunner {
     }
 
     protected Prediction predictIdentifier(Identifier id) {
-        if (!selfTesting && this.selfTestingIdentifier)
-            this.forgetIdentifier(id);
+        if (!this.selfTesting && this.selfTestingIdentifier) this.forgetIdentifier(id);
         // It might be that predictions contain not only identifiers.
         ModelRunner.GLOBAL_PREDICTION_CUTOFF = GLOBAL_PREDICTION_CUTOFF * 5;
-        List<Map<Integer, Pair<Double, Double>>> preds = id.usages.stream().map(this.vocabulary::toIndices).map(usage -> this.model.predictToken(usage, usage.size() - 1)).collect(Collectors.toList());
-        if (!selfTesting && this.selfTestingIdentifier)
-            this.learnIdentifier(id);
+        List<Map<Integer, Pair<Double, Double>>> preds = id.usages.stream()
+                .map(this.vocabulary::toIndices)
+                .map(usage -> this.model.predictToken(usage, usage.size() - 1))
+                .collect(Collectors.toList());
+        if (!this.selfTesting && this.selfTestingIdentifier) this.learnIdentifier(id);
         return new Prediction(id.getName(), id.getRange(), toPredictions(preds));
     }
 
@@ -207,7 +230,7 @@ public class IdRunner {
         this.modelStats[0] += preds.size();
         this.mrr += preds.stream().mapToDouble(IdRunner::toMRR).sum();
         if (this.modelStats[0] / this.PREDICT_PRINT_INTERVAL > prevCount / this.PREDICT_PRINT_INTERVAL && this.modelStats[1] != 0) {
-            System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n", Math.round(this.modelStats[0] / 1e3), (System.currentTimeMillis() + this.modelStats[1]) / 1000, this.mrr / this.modelStats[0]);
+            System.out.printf("Predicting: %dK tokens processed in %ds, avr. MRR: %.4f\n", Math.round(this.modelStats[0] / 1e3), (System.currentTimeMillis() + this.modelStats[1]) / 1000, this.mrr / this.modelStats[0]);
         }
     }
 

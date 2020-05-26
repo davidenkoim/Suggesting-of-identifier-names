@@ -1,13 +1,12 @@
 import com.github.javaparser.*;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.visitor.*;
+import com.github.javaparser.printer.PrettyPrinterConfiguration;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +18,12 @@ public class IdentifiersUsages {
         UsagesCollector.setVerbose(verbose);
     }
 
-    public static ParserConfiguration CONFIG = new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT);
+    public static PrettyPrinterConfiguration PRINTER_CONFIGURATION = new PrettyPrinterConfiguration()
+            .setPrintComments(false);
+//            .setPrintJavadoc(false);
+
+    public static ParserConfiguration CONFIG = new ParserConfiguration()
+            .setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT);
 
     public static void setParserConfiguration(ParserConfiguration config) {
         CONFIG = config;
@@ -59,13 +63,14 @@ public class IdentifiersUsages {
             name.findAncestor(BlockStmt.class).ifPresent(root -> identifiersUsages.add(UsagesCollector.get(name.getNameAsExpression(), root)));
         }
 
-        @Override
-        public void visit(FieldDeclaration name, List<List<Range>> identifiersUsages) {
-            super.visit(name, identifiersUsages);
-            name.findAncestor(ClassOrInterfaceDeclaration.class).ifPresent(root -> {
-                name.getVariables().forEach(var -> identifiersUsages.add(UsagesCollector.get(var.getNameAsExpression(), root)));
-            });
-        }
+// TODO: Сделать нормальный поиск полей.
+//        @Override
+//        public void visit(FieldDeclaration name, List<List<Range>> identifiersUsages) {
+//            super.visit(name, identifiersUsages);
+//            name.findAncestor(ClassOrInterfaceDeclaration.class).ifPresent(root -> {
+//                name.getVariables().forEach(var -> identifiersUsages.add(UsagesCollector.get(var.getNameAsExpression(), root)));
+//            });
+//        }
     }
 
     private static <T> ArrayList<T> getUnique(List<T> list) {
@@ -125,7 +130,7 @@ public class IdentifiersUsages {
         try {
             CompilationUnit cu = StaticJavaParser.parse(file);
             PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8);
-            writer.print(cu.toString());
+            writer.print(cu.toString(PRINTER_CONFIGURATION));
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -140,9 +145,7 @@ public class IdentifiersUsages {
             return;
         }
         File file = new File(args[0]);
-        // IdentifiersUsages.setVerbose(true);
-        // CompilationUnit cu = StaticJavaParser.parse(file);
-        // System.out.println(cu);
-        // System.out.println(IdentifiersUsages.fromFile(file));
+        IdentifiersUsages.setVerbose(true);
+        System.out.println(IdentifiersUsages.fromFile(file));
     }
 }

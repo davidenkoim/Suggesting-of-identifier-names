@@ -1,16 +1,21 @@
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.javaparser.Range;
 import org.jetbrains.annotations.NotNull;
-import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
 import java.util.*;
 import static java.lang.String.format;
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Prediction implements List<Pair<String, Double>> {
 
     private final String gt;
-
     private final Range range;
-
     private List<Pair<String, Double>> prediction = new ArrayList<>();
 
     public Prediction(String gt, Range range) {
@@ -22,6 +27,14 @@ public class Prediction implements List<Pair<String, Double>> {
         this.gt = gt;
         this.range = range;
         this.prediction = prediction;
+    }
+
+    public ObjectNode toJson(ObjectMapper mapper){
+        ObjectNode root = mapper.createObjectNode();
+        root.put("gt", this.gt);
+        root.set("range", mapper.valueToTree(this.range));
+        root.set("prediction", mapper.valueToTree(this.prediction));
+        return root;
     }
 
     static Prediction fromIdentifier(Identifier id) {
@@ -166,3 +179,4 @@ public class Prediction implements List<Pair<String, Double>> {
         return this.prediction.subList(fromIndex, toIndex);
     }
 }
+

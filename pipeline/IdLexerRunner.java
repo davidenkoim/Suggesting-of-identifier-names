@@ -5,6 +5,7 @@ import slp.core.lexing.Lexer;
 import slp.core.modeling.Model;
 import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -112,7 +113,14 @@ public class IdLexerRunner {
      */
     public Stream<Pair<File, Stream<Identifier>>> lexDirectory(File directory) {
         try {
-            return Files.walk(directory.toPath()).map(Path::toFile).filter(File::isFile).filter(this::willLexFile).map(fIn -> Pair.of(fIn, lexFile(fIn)));
+            return Files.walk(directory.toPath())
+                    .map(Path::toFile)
+                    .filter(File::isFile)
+                    .filter(this::willLexFile)
+                    .peek(file -> {
+                        if (this.rewriteFiles) IdentifiersUsages.rewrite(file);
+                    })
+                    .map(fIn -> Pair.of(fIn, lexFile(fIn)));
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -154,34 +162,24 @@ public class IdLexerRunner {
     public Stream<Identifier> lexFile(File file) {
         if (!willLexFile(file))
             return Stream.empty();
-        if (this.rewriteFiles) {
-            IdentifiersUsages.rewrite(file);
-        }
         List<List<Range>> identifiersUsages = IdentifiersUsages.fromFile(file);
         List<String> lines = Reader.readLines(file);
         assert lines != null;
         assert identifiersUsages.size() > 0;
-        return identifiersUsages.stream().peek(i -> {
+        return identifiersUsages.stream().map(i -> {
+            Identifier res = null;
             try {
-                range2token(i.get(0), lines);
+                res = new Identifier(range2token(i.get(0), lines), i.get(0),
+                        i.stream().map(x -> range2ngram(x, lines)).collect(Collectors.toList()));
             } catch (Exception e) {
-                System.out.println(file);
-                System.out.println(i);
                 IdentifiersUsages.setVerbose(true);
                 IdentifiersUsages.fromFile(file);
+                System.out.println(file);
+                System.out.println(i);
                 e.printStackTrace();
             }
-        }).map(i -> new Identifier(range2token(i.get(0), lines), i.get(0), i.stream().map(x -> range2ngram(x, lines)).collect(Collectors.toList())));
-    }
-
-    /**
-     * Lex the provided text to a stream of tokens per line.
-     * <b>Note:</b> if possible, use lex(File) instead! Knowing the file location/context can benefit e.g. AST lexers.
-     *
-     * @param content Textual content to lex
-     */
-    public Stream<Stream<String>> lexText(String content) {
-        return this.lexer.lexText(content);
+            return res;
+        });
     }
 
     public Stream<String> lexLine(String line) {

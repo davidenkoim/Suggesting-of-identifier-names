@@ -7,9 +7,9 @@ import static java.lang.String.join;
 
 public class Identifier implements List<List<String>> {
 
-    private String name;
+    private final String name;
 
-    private Range range;
+    private final Range range;
 
     public List<List<String>> usages = new ArrayList<>();
 
